@@ -1,4 +1,17 @@
+import sqlite3
+
 RUTA_DB_POR_DEFECTO = "laboratorio.db"
+TIPOS_PERMITIDOS = ("computador", "proyector", "tableta")
+ESTADO_INICIAL = "disponible"
+
+SQL_CREAR_TABLA = """
+CREATE TABLE IF NOT EXISTS equipo (
+    codigo_equipo TEXT PRIMARY KEY,
+    tipo          TEXT NOT NULL,
+    descripcion   TEXT NOT NULL,
+    estado        TEXT NOT NULL
+)
+"""
 
 
 def registrar_equipo(
@@ -7,4 +20,55 @@ def registrar_equipo(
     descripcion: str,
     ruta_db: str = RUTA_DB_POR_DEFECTO,
 ) -> dict:
-    raise NotImplementedError
+    """Registra un equipo nuevo en el inventario con estado 'disponible'.
+
+    Args:
+        codigo_equipo: Identificador único del equipo (ej. "EQ-01").
+            Se eliminan espacios y se convierte a mayúsculas.
+        tipo: "computador", "proyector" o "tableta".
+            Se eliminan espacios y se convierte a minúsculas.
+        descripcion: Información básica del equipo (no vacía).
+        ruta_db: Ruta del archivo SQLite donde se guarda el equipo.
+
+    Returns:
+        dict con las claves codigo_equipo, tipo, descripcion y estado.
+
+    Raises:
+        ValueError: si falta el código o la descripción, si el tipo no es
+            permitido o si el código ya está registrado.
+    """
+    codigo = codigo_equipo.strip().upper()
+    tipo_normalizado = tipo.strip().lower()
+    descripcion_limpia = descripcion.strip()
+
+    if not codigo:
+        raise ValueError("El campo codigo_equipo es obligatorio.")
+    if not descripcion_limpia:
+        raise ValueError("El campo descripcion es obligatorio.")
+    if tipo_normalizado not in TIPOS_PERMITIDOS:
+        raise ValueError(
+            f"El tipo '{tipo_normalizado}' no es permitido. "
+            f"Use: {', '.join(TIPOS_PERMITIDOS)}."
+        )
+
+    conexion = sqlite3.connect(ruta_db)
+    try:
+        conexion.execute(SQL_CREAR_TABLA)
+        try:
+            conexion.execute(
+                "INSERT INTO equipo (codigo_equipo, tipo, descripcion, estado) "
+                "VALUES (?, ?, ?, ?)",
+                (codigo, tipo_normalizado, descripcion_limpia, ESTADO_INICIAL),
+            )
+        except sqlite3.IntegrityError:
+            raise ValueError(f"El equipo '{codigo}' ya está registrado.")
+        conexion.commit()
+    finally:
+        conexion.close()
+
+    return {
+        "codigo_equipo": codigo,
+        "tipo": tipo_normalizado,
+        "descripcion": descripcion_limpia,
+        "estado": ESTADO_INICIAL,
+    }
