@@ -2,8 +2,8 @@
 
 - **Proyecto:** Documentar y probar las reglas de negocio de un sistema monolítico para la gestión de préstamos de equipos en laboratorios de informática
 - **Estudiante:** Emmanuel Steven González Muñoz
-- **Funcionalidad:** HU-01. Registrar equipos (`registrar_equipo`)
-- **Asistente usado:** Claude
+- **Funcionalidad:** HU-01. Registrar equipos (`registrar_equipo`), consulta de disponibles (`consultar_disponibles`) y registro de préstamos (`registrar_prestamo`)
+- **Asistente usado:** Claude y Gemini
 
 > Commits del historial:
 > `34b87be` Contrato en README · `3996491` Pruebas en rojo · `f250843` Implementación en verde · `e82f600` Refactor
@@ -13,6 +13,7 @@
 ## Entradas
 
 ### Entrada 1. Elección de la historia de usuario
+
 - **Fecha:** 2026-11-26
 - **Prompt o sugerencia:** Claude recomendó trabajar HU-04 (impedir préstamos de equipos ocupados) por su relación con RNF-01 y por tener más casos límite.
 - **Decisión:** Rechazada
@@ -21,6 +22,7 @@
 - **Commit relacionado:** `34b87be`
 
 ### Entrada 2. Contrato de la función en el README
+
 - **Fecha:** 2026-11-26
 - **Prompt o sugerencia:** Claude redactó la sección "Funcionalidad de la semana 5": firma con type hints, parámetros, retorno, excepciones, casos límite y 4 ejemplos. Incluía un parámetro opcional `ruta_db` que no estaba en el contrato de la Semana 4.
 - **Decisión:** Aceptada
@@ -29,6 +31,7 @@
 - **Commit relacionado:** `34b87be`
 
 ### Entrada 3. Pruebas antes de implementar
+
 - **Fecha:** 2026-11-26
 - **Prompt o sugerencia:** Claude propuso 12 casos de prueba (3 normales, 4 límite, 2 de error, algunos parametrizados) y un esqueleto de `src/equipos.py` que solo lanza `NotImplementedError`, para que `pytest` pudiera importar la función y mostrar pruebas en rojo.
 - **Decisión:** Aceptada
@@ -37,6 +40,7 @@
 - **Commit relacionado:** `3996491`
 
 ### Entrada 4. Implementación con SQLite
+
 - **Fecha:** 2026-11-26
 - **Prompt o sugerencia:** Claude entregó la implementación: validar antes de abrir la base, `codigo_equipo` como `PRIMARY KEY` para detectar duplicados con `sqlite3.IntegrityError` (traducido a `ValueError`), consultas con parámetros `?` y `try/finally` para cerrar la conexión.
 - **Decisión:** Aceptada
@@ -45,6 +49,7 @@
 - **Commit relacionado:** `f250843`
 
 ### Entrada 5. Entorno virtual y `.env`
+
 - **Fecha:** 2026-11-26
 - **Prompt o sugerencia:** Claude indicó crear un entorno virtual `.venv`, instalar `pytest` y generar `requirements.txt`. También indicó que no era necesario un archivo `.env` porque el proyecto no usa claves, y que bastaba dejarlo en el `.gitignore`.
 - **Decisión:** Aceptada
@@ -53,6 +58,7 @@
 - **Commit relacionado:** `3996491`
 
 ### Entrada 6. Refactorización
+
 - **Fecha:** 2026-11-26
 - **Prompt o sugerencia:** Claude propuso dividir `registrar_equipo` en `_normalizar_y_validar` y `_guardar_equipo`, mover el `INSERT` a la constante `SQL_INSERTAR_EQUIPO` y eliminar la duplicación del diccionario del equipo.
 - **Decisión:** Aceptada
@@ -64,11 +70,11 @@
 
 ## Tabla resumen de decisiones
 
-| Decisión | Cantidad | Entradas |
-|---|---|---|
-| Aceptadas | 5 | 2, 3, 4, 5, 6 |
-| Aceptadas con cambios | 0 | - |
-| Rechazadas | 1 | 1 |
+| Decisión              | Cantidad | Entradas      |
+| --------------------- | -------- | ------------- |
+| Aceptadas             | 5        | 2, 3, 4, 5, 6 |
+| Aceptadas con cambios | 0        | -             |
+| Rechazadas            | 1        | 1             |
 
 ---
 
@@ -97,6 +103,7 @@ Trabajar con pruebas primero me obligó a definir el contrato antes de pensar en
 ## Entradas
 
 ### Entrada 7. Segunda revisión de código y seguridad con IA
+
 - **Fecha:** 2026-11-25
 - **Prompt o sugerencia:** Se le pidió a Claude actuar como auditor de seguridad y calidad (guía de la semana 6): revisar `src/equipos.py` y las pruebas con archivo, línea y severidad, separando problemas reales de falsos positivos. Claude entregó 8 hallazgos reales (H-01 a H-08) y 4 sospechas descartadas.
 - **Decisión:** Aceptada con cambios
@@ -105,6 +112,7 @@ Trabajar con pruebas primero me obligó a definir el contrato antes de pensar en
 - **Commit relacionado:** `341614f` (commit revisado)
 
 ### Entrada 8. Corrección de H-02 con pruebas primero
+
 - **Fecha:** 2026-11-25
 - **Prompt o sugerencia:** Claude propuso escribir primero 4 pruebas nuevas (`None` en cada campo y un número como código) y luego implementar `_limpiar_texto` más una validación de `tipo` obligatorio, para que los datos que no son texto lancen `ValueError` y no `AttributeError`.
 - **Decisión:** Aceptada
@@ -113,6 +121,7 @@ Trabajar con pruebas primero me obligó a definir el contrato antes de pensar en
 - **Commit relacionado:** `05b3b9e` (rojo) y `b787ff8` (verde)
 
 ### Entrada 9. Prueba de abuso para el campo `tipo` (H-07)
+
 - **Fecha:** 2026-11-25
 - **Prompt o sugerencia:** Claude propuso agregar una prueba de que un `tipo` con SQL malicioso es rechazado y no toca la tabla, y predijo que pasaría a la primera.
 - **Decisión:** Aceptada con cambios
@@ -121,6 +130,7 @@ Trabajar con pruebas primero me obligó a definir el contrato antes de pensar en
 - **Commit relacionado:** `ff8424d`
 
 ### Entrada 10. No modificar pruebas existentes (excepto el formato de H-03)
+
 - **Fecha:** 2026-11-25
 - **Prompt o sugerencia:** Claude recomendó no tocar las pruebas ya entregadas por H-04, H-06 y H-08, y limitar el único cambio en una prueba existente a partir una línea larga (E501), sin cambiar argumentos ni `assert`.
 - **Decisión:** Aceptada
@@ -130,13 +140,54 @@ Trabajar con pruebas primero me obligó a definir el contrato antes de pensar en
 
 ## Tabla resumen de decisiones (semana 6)
 
-| Decisión | Cantidad | Entradas |
-|---|---|---|
-| Aceptadas | 2 | 8, 10 |
-| Aceptadas con cambios | 2 | 7, 9 |
-| Rechazadas | 0 | - |
+| Decisión              | Cantidad | Entradas |
+| --------------------- | -------- | -------- |
+| Aceptadas             | 2        | 8, 10    |
+| Aceptadas con cambios | 2        | 7, 9     |
+| Rechazadas            | 0        | -        |
 
 ## Errores que atraparon las pruebas (semana 6)
 
 - **Pruebas en rojo de H-02:** las 4 pruebas nuevas de `tests/test_validacion_entradas.py` fallaron antes de la corrección, lo que confirmó que `registrar_equipo` no manejaba datos que no son texto según el contrato. Pasaron tras el commit `b787ff8`.
 - **`NameError` en la prueba de H-07:** `test_tipo_con_sql_malicioso_es_rechazado_y_no_toca_la_tabla` falló con `NameError: name 'pytest' is not defined` (`1 failed, 18 passed`). La causa fue un import omitido en la prueba, no el código; se corrigió antes del commit.
+
+---
+
+# Semana 7: particiones, valores límite y tablas de decisión
+
+- **Funcionalidades probadas:** `registrar_equipo`, `consultar_disponibles` y `registrar_prestamo`
+- **Asistentes usados:** Claude y Gemini
+
+## Entradas
+
+### Entrada 11. Diseño de casos, límites y tabla de decisión (Actividad 7)
+
+- **Fecha:** 2026-11-26
+- **Prompt o sugerencia:** Se diseñaron tablas de particiones de equivalencia, valores límite, ambigüedades y una tabla de decisión para `registrar_prestamo` combinando existencia del equipo, disponibilidad y validez de los datos.
+- **Decisión:** Aceptada con cambios
+- **Por qué:** Se ajustaron las reglas de oráculo y ambigüedades para que lo esperado salga de la regla y las decisiones de diseño, sin alterar pruebas anteriores.
+- **Verificación:** Documentado en la Sección 1 de `registro_pruebas.md`.
+
+### Entrada 12. Implementación de funciones faltantes y pruebas con `pytest`
+
+- **Fecha:** 2026-11-26
+- **Prompt o sugerencia:** Se implementaron `consultar_disponibles` y `registrar_prestamo` en `src/equipos.py` y se crearon las pruebas parametrizadas en `tests/test_reglas_negocio_s7.py`.
+- **Decisión:** Aceptada con cambios
+- **Por qué:** Inicialmente `pytest` reportó `ImportError` porque `src/equipos.py` solo tenía `registrar_equipo`; al completar las funciones y revisar los casos con las tres preguntas, la suite quedó sólida sin borrar pruebas previas.
+- **Verificación:** `python -m pytest -v` ejecutó 48 pruebas en estado `PASSED`.
+
+### Entrada 13. Datos sintéticos y pruebas de rotura intencional
+
+- **Fecha:** 2026-11-26
+- **Prompt o sugerencia:** Se incorporó el fixture `datos_sinteticos_s7` con caracteres difíciles (`José Muñoz`, `María Peña`, `D'Marco Peña`) y se aplicaron tres cambios intencionales en `src/equipos.py` para verificar la detección de fallos.
+- **Decisión:** Aceptada
+- **Por qué:** Permite comprobar que las pruebas fallan ante defectos reales (estado inicial, omisión de `.upper()` y omisión de validación de equipo ya prestado) y luego restaurar el código limpio.
+- **Verificación:** Registrado en las Secciones 3 y 4 de `registro_pruebas.md` y verificado con `python -m pytest -v` tras restaurar `src/equipos.py`.
+
+## Tabla resumen de decisiones (semana 7)
+
+| Decisión              | Cantidad | Entradas |
+| --------------------- | -------- | -------- |
+| Aceptadas             | 1        | 13       |
+| Aceptadas con cambios | 2        | 11, 12   |
+| Rechazadas            | 0        | -        |
