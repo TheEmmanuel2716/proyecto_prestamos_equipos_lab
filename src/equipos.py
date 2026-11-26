@@ -1,4 +1,5 @@
 import sqlite3
+from typing import TypedDict
 
 RUTA_DB_POR_DEFECTO = "laboratorio.db"
 TIPOS_PERMITIDOS = ("computador", "proyector", "tableta")
@@ -18,6 +19,13 @@ INSERT INTO equipo (codigo_equipo, tipo, descripcion, estado)
 VALUES (:codigo_equipo, :tipo, :descripcion, :estado)
 """
 
+class Equipo(TypedDict):
+    """Datos de un equipo del inventario, tal como se guardan en SQLite."""
+
+    codigo_equipo: str
+    tipo: str
+    descripcion: str
+    estado: str
 
 def _limpiar_texto(valor: object) -> str:
     """Devuelve el texto sin espacios en los extremos.
