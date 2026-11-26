@@ -6,6 +6,7 @@ TIPOS_PERMITIDOS = ("computador", "proyector", "tableta")
 ESTADO_INICIAL = "disponible"
 ESTADO_PRESTADO = "prestado"
 ESTADO_PRESTAMO_ACTIVO = "activo"
+ESTADO_PRESTAMO_DEVUELTO = "devuelto"
 MENSAJE_CAMPO_OBLIGATORIO = "El campo {campo} es obligatorio."
 
 SQL_CREAR_TABLA = """
@@ -14,6 +15,7 @@ CREATE TABLE IF NOT EXISTS equipo (
     tipo          TEXT NOT NULL,
     descripcion   TEXT NOT NULL,
     estado        TEXT NOT NULL
+        CHECK (estado IN ('disponible', 'prestado'))
 )
 """
 
@@ -26,6 +28,7 @@ CREATE TABLE IF NOT EXISTS prestamo (
     fecha_prestamo     TEXT NOT NULL,
     fecha_devolucion   TEXT,
     estado_prestamo    TEXT NOT NULL,
+        CHECK (estado_prestamo IN ('activo', 'devuelto')),
     FOREIGN KEY (codigo_equipo) REFERENCES equipo(codigo_equipo)
 )
 """
@@ -80,6 +83,65 @@ SET estado = 'prestado'
 WHERE codigo_equipo = :codigo_equipo
 """
 
+SQL_MARCAR_EQUIPO_DISPONIBLE = """
+UPDATE equipo
+SET estado = 'disponible'
+WHERE codigo_equipo = :codigo_equipo
+"""
+
+SQL_MARCAR_PRESTAMO_DEVUELTO = """
+UPDATE prestamo
+SET fecha_devolucion = :fecha_devolucion,
+    estado_prestamo = 'devuelto'
+WHERE id_prestamo = :id_prestamo
+  AND estado_prestamo = 'activo'
+"""
+
+SQL_BUSCAR_PRESTAMO_ACTIVO_POR_EQUIPO = """
+SELECT id_prestamo, codigo_equipo, solicitante_id,
+       solicitante_nombre, fecha_prestamo, fecha_devolucion,
+       estado_prestamo
+FROM prestamo
+WHERE codigo_equipo = :codigo_equipo
+  AND estado_prestamo = 'activo'
+ORDER BY id_prestamo DESC
+LIMIT 1
+"""
+
+SQL_BUSCAR_PRESTAMO_POR_ID = """
+SELECT id_prestamo, codigo_equipo, solicitante_id,
+       solicitante_nombre, fecha_prestamo, fecha_devolucion,
+       estado_prestamo
+FROM prestamo
+WHERE id_prestamo = :id_prestamo
+"""
+
+SQL_CONSULTAR_PRESTAMOS_ACTIVOS = """
+SELECT id_prestamo, codigo_equipo, solicitante_id,
+       solicitante_nombre, fecha_prestamo, fecha_devolucion,
+       estado_prestamo
+FROM prestamo
+WHERE estado_prestamo = 'activo'
+ORDER BY id_prestamo ASC
+"""
+
+SQL_CONSULTAR_HISTORIAL = """
+SELECT id_prestamo, codigo_equipo, solicitante_id,
+       solicitante_nombre, fecha_prestamo, fecha_devolucion,
+       estado_prestamo
+FROM prestamo
+ORDER BY id_prestamo ASC
+"""
+
+SQL_CONSULTAR_HISTORIAL_POR_EQUIPO = """
+SELECT id_prestamo, codigo_equipo, solicitante_id,
+       solicitante_nombre, fecha_prestamo, fecha_devolucion,
+       estado_prestamo
+FROM prestamo
+WHERE codigo_equipo = :codigo_equipo
+ORDER BY id_prestamo ASC
+"""
+
 
 class Equipo(TypedDict):
     """Datos de un equipo del inventario, tal como se guardan en SQLite."""
@@ -90,6 +152,18 @@ class Equipo(TypedDict):
     estado: str
 
 
+class Prestamo(TypedDict):
+    """Datos completos de un préstamo almacenado en SQLite."""
+
+    id_prestamo: int
+    codigo_equipo: str
+    solicitante_id: str
+    solicitante_nombre: str
+    fecha_prestamo: str
+    fecha_devolucion: str | None
+    estado_prestamo: str
+
+
 def _limpiar_texto(valor: object) -> str:
     """Devuelve el texto sin espacios en los extremos.
 
@@ -97,6 +171,38 @@ def _limpiar_texto(valor: object) -> str:
     para que se trate como un dato faltante.
     """
     return valor.strip() if isinstance(valor, str) else ""
+
+
+def _validar_ruta_db(ruta_db: object) -> str:
+    """Valida y devuelve la ruta SQLite usada por las operaciones públicas."""
+    ruta = _limpiar_texto(ruta_db)
+    if not ruta:
+        raise ValueError(MENSAJE_CAMPO_OBLIGATORIO.format(campo="ruta_db"))
+    return ruta
+
+
+def inicializar_bd(ruta_db: str = RUTA_DB_POR_DEFECTO) -> None:
+    """Crea de forma aislada las tablas, índices y relaciones del sistema."""
+    ruta = _validar_ruta_db(ruta_db)
+    conexion = sqlite3.connect(ruta)
+    try:
+        conexion.execute("PRAGMA foreign_keys = ON")
+        conexion.execute(SQL_CREAR_TABLA)
+        conexion.execute(SQL_CREAR_TABLA_PRESTAMO)
+        conexion.execute(
+            "CREATE INDEX IF NOT EXISTS idx_prestamo_codigo "
+            "ON prestamo(codigo_equipo)"
+        )
+        conexion.execute(
+            "CREATE INDEX IF NOT EXISTS idx_prestamo_estado "
+            "ON prestamo(estado_prestamo)"
+        )
+        conexion.commit()
+    except Exception:
+        conexion.rollback()
+        raise
+    finally:
+        conexion.close()
 
 
 def _normalizar_y_validar(codigo_equipo: str, tipo: str, descripcion: str) -> Equipo:
@@ -136,16 +242,23 @@ def _guardar_equipo(equipo: Equipo, ruta_db: str) -> None:
     Raises:
         ValueError: si el código del equipo ya está registrado.
     """
-    conexion = sqlite3.connect(ruta_db)
+    ruta = _validar_ruta_db(ruta_db)
+    inicializar_bd(ruta)
+    conexion = sqlite3.connect(ruta)
     try:
-        conexion.execute(SQL_CREAR_TABLA)
+        conexion.execute("PRAGMA foreign_keys = ON")
+        conexion.execute("BEGIN")
         try:
             conexion.execute(SQL_INSERTAR_EQUIPO, equipo)
         except sqlite3.IntegrityError:
+            conexion.rollback()
             raise ValueError(
                 f"El equipo '{equipo['codigo_equipo']}' ya está registrado."
             ) from None
         conexion.commit()
+    except Exception:
+        conexion.rollback()
+        raise
     finally:
         conexion.close()
 
@@ -191,7 +304,9 @@ def consultar_disponibles(ruta_db: str = RUTA_DB_POR_DEFECTO) -> list[Equipo]:
         base o la tabla aún no existen o no hay equipos disponibles,
         retorna una lista vacía.
     """
-    conexion = sqlite3.connect(ruta_db)
+    ruta = _validar_ruta_db(ruta_db)
+    inicializar_bd(ruta)
+    conexion = sqlite3.connect(ruta)
     try:
         try:
             filas = conexion.execute(SQL_CONSULTAR_DISPONIBLES).fetchall()
@@ -250,11 +365,12 @@ def registrar_prestamo(
     if not fecha:
         raise ValueError(MENSAJE_CAMPO_OBLIGATORIO.format(campo="fecha_prestamo"))
 
-    conexion = sqlite3.connect(ruta_db)
+    ruta = _validar_ruta_db(ruta_db)
+    inicializar_bd(ruta)
+    conexion = sqlite3.connect(ruta)
     try:
         conexion.execute("PRAGMA foreign_keys = ON")
-        conexion.execute(SQL_CREAR_TABLA)
-        conexion.execute(SQL_CREAR_TABLA_PRESTAMO)
+        conexion.execute("BEGIN")
 
         try:
             fila_equipo = conexion.execute(
@@ -296,3 +412,181 @@ def registrar_prestamo(
             raise
     finally:
         conexion.close()
+
+
+def _fila_a_prestamo(fila: tuple[object, ...]) -> Prestamo:
+    """Convierte una fila SQLite completa a un diccionario de préstamo."""
+    return {
+        "id_prestamo": int(fila[0]),
+        "codigo_equipo": str(fila[1]),
+        "solicitante_id": str(fila[2]),
+        "solicitante_nombre": str(fila[3]),
+        "fecha_prestamo": str(fila[4]),
+        "fecha_devolucion": fila[5] if fila[5] is None else str(fila[5]),
+        "estado_prestamo": str(fila[6]),
+    }
+
+
+def registrar_devolucion(
+    codigo_equipo: str,
+    fecha_devolucion: str,
+    ruta_db: str = RUTA_DB_POR_DEFECTO,
+) -> Prestamo:
+    """Devuelve el préstamo activo de un equipo y lo vuelve disponible."""
+    codigo = _limpiar_texto(codigo_equipo).upper()
+    fecha = _limpiar_texto(fecha_devolucion)
+    if not codigo:
+        raise ValueError(MENSAJE_CAMPO_OBLIGATORIO.format(campo="codigo_equipo"))
+    if not fecha:
+        raise ValueError(MENSAJE_CAMPO_OBLIGATORIO.format(campo="fecha_devolucion"))
+
+    ruta = _validar_ruta_db(ruta_db)
+    inicializar_bd(ruta)
+    conexion = sqlite3.connect(ruta)
+    try:
+        conexion.execute("PRAGMA foreign_keys = ON")
+        conexion.execute("BEGIN")
+        fila_prestamo = conexion.execute(
+            SQL_BUSCAR_PRESTAMO_ACTIVO_POR_EQUIPO,
+            {"codigo_equipo": codigo},
+        ).fetchone()
+        if fila_prestamo is None:
+            raise ValueError(
+                f"El equipo '{codigo}' no tiene un préstamo activo."
+            )
+
+        id_prestamo = int(fila_prestamo[0])
+        cursor = conexion.execute(
+            SQL_MARCAR_PRESTAMO_DEVUELTO,
+            {"id_prestamo": id_prestamo, "fecha_devolucion": fecha},
+        )
+        if cursor.rowcount != 1:
+            raise ValueError(
+                f"El equipo '{codigo}' no tiene un préstamo activo."
+            )
+        conexion.execute(
+            SQL_MARCAR_EQUIPO_DISPONIBLE,
+            {"codigo_equipo": codigo},
+        )
+        conexion.commit()
+        devuelto = _fila_a_prestamo(fila_prestamo)
+        devuelto["fecha_devolucion"] = fecha
+        devuelto["estado_prestamo"] = ESTADO_PRESTAMO_DEVUELTO
+        return devuelto
+    except Exception:
+        conexion.rollback()
+        raise
+    finally:
+        conexion.close()
+
+
+def devolver_prestamo(
+    id_prestamo: int,
+    fecha_devolucion: str,
+    ruta_db: str = RUTA_DB_POR_DEFECTO,
+) -> Prestamo:
+    """Devuelve un préstamo identificado por su clave primaria."""
+    if isinstance(id_prestamo, bool) or not isinstance(id_prestamo, int):
+        raise ValueError(MENSAJE_CAMPO_OBLIGATORIO.format(campo="id_prestamo"))
+    if id_prestamo <= 0:
+        raise ValueError("El id_prestamo debe ser un entero positivo.")
+    fecha = _limpiar_texto(fecha_devolucion)
+    if not fecha:
+        raise ValueError(MENSAJE_CAMPO_OBLIGATORIO.format(campo="fecha_devolucion"))
+
+    ruta = _validar_ruta_db(ruta_db)
+    inicializar_bd(ruta)
+    conexion = sqlite3.connect(ruta)
+    try:
+        conexion.execute("PRAGMA foreign_keys = ON")
+        conexion.execute("BEGIN")
+        fila = conexion.execute(
+            SQL_BUSCAR_PRESTAMO_POR_ID,
+            {"id_prestamo": id_prestamo},
+        ).fetchone()
+        if fila is None:
+            raise ValueError(f"El préstamo '{id_prestamo}' no existe.")
+        if str(fila[6]) != ESTADO_PRESTAMO_ACTIVO:
+            raise ValueError(
+                f"El préstamo '{id_prestamo}' no tiene estado activo."
+            )
+
+        codigo = str(fila[1])
+        cursor = conexion.execute(
+            SQL_MARCAR_PRESTAMO_DEVUELTO,
+            {"id_prestamo": id_prestamo, "fecha_devolucion": fecha},
+        )
+        if cursor.rowcount != 1:
+            raise ValueError(
+                f"El préstamo '{id_prestamo}' no tiene estado activo."
+            )
+        conexion.execute(
+            SQL_MARCAR_EQUIPO_DISPONIBLE,
+            {"codigo_equipo": codigo},
+        )
+        conexion.commit()
+        devuelto = _fila_a_prestamo(fila)
+        devuelto["fecha_devolucion"] = fecha
+        devuelto["estado_prestamo"] = ESTADO_PRESTAMO_DEVUELTO
+        return devuelto
+    except Exception:
+        conexion.rollback()
+        raise
+    finally:
+        conexion.close()
+
+
+def consultar_prestamos_activos(
+    ruta_db: str = RUTA_DB_POR_DEFECTO,
+) -> list[Prestamo]:
+    """Retorna los préstamos activos ordenados por identificador."""
+    ruta = _validar_ruta_db(ruta_db)
+    inicializar_bd(ruta)
+    conexion = sqlite3.connect(ruta)
+    try:
+        filas = conexion.execute(SQL_CONSULTAR_PRESTAMOS_ACTIVOS).fetchall()
+        return [_fila_a_prestamo(fila) for fila in filas]
+    finally:
+        conexion.close()
+
+
+def consultar_prestamos(
+    ruta_db: str = RUTA_DB_POR_DEFECTO,
+    codigo_equipo: str | None = None,
+) -> list[Prestamo]:
+    """Retorna el historial completo o el historial de un equipo."""
+    ruta = _validar_ruta_db(ruta_db)
+    inicializar_bd(ruta)
+    conexion = sqlite3.connect(ruta)
+    try:
+        if codigo_equipo is None:
+            filas = conexion.execute(SQL_CONSULTAR_HISTORIAL).fetchall()
+        else:
+            codigo = _limpiar_texto(codigo_equipo).upper()
+            if not codigo:
+                raise ValueError(
+                    MENSAJE_CAMPO_OBLIGATORIO.format(campo="codigo_equipo")
+                )
+            filas = conexion.execute(
+                SQL_CONSULTAR_HISTORIAL_POR_EQUIPO,
+                {"codigo_equipo": codigo},
+            ).fetchall()
+        return [_fila_a_prestamo(fila) for fila in filas]
+    finally:
+        conexion.close()
+
+
+def consultar_historial_prestamos(
+    ruta_db: str = RUTA_DB_POR_DEFECTO,
+    codigo_equipo: str | None = None,
+) -> list[Prestamo]:
+    """Alias explícito para consultar el historial de préstamos."""
+    return consultar_prestamos(ruta_db, codigo_equipo)
+
+
+def consultar_historial(
+    ruta_db: str = RUTA_DB_POR_DEFECTO,
+    codigo_equipo: str | None = None,
+) -> list[Prestamo]:
+    """Alias corto para consultar el historial de préstamos."""
+    return consultar_prestamos(ruta_db, codigo_equipo)

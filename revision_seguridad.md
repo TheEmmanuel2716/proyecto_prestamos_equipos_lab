@@ -73,3 +73,33 @@ No se encontraron hallazgos de severidad alta. Los hallazgos H-04, H-06 y H-08 (
 | Servidor Flask (ADR-001) | Aún no se implementa; no hay rutas que proteger. | Al agregarlo, revisar `ruta_db`, escape de mensajes de error y control de acceso. |
 
 **Claves expuestas:** Ninguna.
+
+## 5. Estado final de la consolidación
+
+Fecha de revisión final: 2026-11-26.
+
+### Correcciones verificadas
+
+| Área | Resultado final |
+|---|---|
+| Esquema SQLite | Inicialización central, tablas `equipo` y `prestamo`, índices y llave foránea. |
+| Transacciones | Préstamos y devoluciones usan `BEGIN`/`commit`/`rollback` y cierran conexiones. |
+| Entradas | Campos y rutas vacíos/no textuales se rechazan con `ValueError`. |
+| Estado | Equipos disponibles/prestados y préstamos activos/devueltos siguen reglas consistentes. |
+| Consultas | Lecturas ordenadas y parametrizadas para disponibles, activos e historial. |
+| Inyección SQL | Pruebas con código, descripción, solicitante, fechas y SQL malicioso. |
+| Datos sintéticos | No se encontraron datos reales de personas ni secretos reales. |
+
+### Pendientes justificados
+
+1. Interfaz web o CLI: fuera del alcance monolítico actual y sin requisito de
+   implementación de servidor.
+2. Autenticación y roles: no existe una entidad de usuario ni permisos definidos
+   en el modelo; debe incorporarse en una fase posterior.
+3. Formato calendario avanzado: el proyecto exige texto no vacío, sin imponer
+   calendario ni vencimiento; esas reglas requieren requisitos adicionales.
+4. Límites máximos de longitud: no se definieron en el contrato vigente y no se
+   impusieron límites arbitrarios.
+
+No quedaron hallazgos críticos o altos abiertos. El estado final fue comprobado
+con 65 pruebas verdes y Ruff sin errores.

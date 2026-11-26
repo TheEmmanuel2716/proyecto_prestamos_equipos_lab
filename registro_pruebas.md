@@ -126,3 +126,40 @@
 **Origen:** Datos sintéticos creados para las pruebas del laboratorio con apoyo de IA (fixture `datos_sinteticos_s7` en `tests/test_reglas_negocio_s7.py`). Confirmo que no corresponden a personas reales.
 
 **Casos difíciles incluidos:** Tildes (`José`, `María`, `portátil`, `préstamo`), `ñ` (`Muñoz`, `Peña`), apóstrofo (`D'Marco`), cadenas vacías, solo espacios, `None`, valores numéricos (`123`) y textos de longitud mínima de 1 carácter.
+
+---
+
+## 5. Consolidación integral
+
+### Regla 4: inicialización del esquema
+
+`inicializar_bd` crea de forma aislada las tablas `equipo` y `prestamo`, sus
+llaves foráneas y los índices necesarios. Las operaciones también invocan la
+misma inicialización, por lo que funcionan sobre bases nuevas o temporales.
+
+### Regla 5: devolución y liberación
+
+Una devolución solo procede si existe un préstamo activo. La operación actualiza
+`fecha_devolucion` y `estado_prestamo` a `devuelto`, y cambia el equipo a
+`disponible` dentro de la misma transacción. Una segunda devolución o una
+devolución sobre un equipo disponible se rechaza sin modificar el historial.
+
+| Técnica | Caso | Esperado | Prueba |
+|---|---|---|---|
+| Normal válida | Equipo activo con código en minúsculas | Devuelve y libera | `test_registrar_devolucion_libera_el_equipo_y_actualiza_historial` |
+| Variante por ID | ID válido activo | Devuelve el registro | `test_devolver_prestamo_por_id_funciona` |
+| Entrada vacía/no textual | Código o fecha faltante | `ValueError` | `test_registrar_devolucion_rechaza_entradas_invalidas` |
+| Estado inválido | Equipo disponible sin préstamo activo | `ValueError` | `test_registrar_devolucion_rechaza_equipo_sin_prestamo_activo` |
+| Idempotencia negativa | Segunda devolución | Rechazo y sin cambios | `test_segunda_devolucion_es_rechazada_sin_modificar_el_historial` |
+
+### Regla 6: consultas
+
+Las consultas activos e historial usan filtros SQL parametrizados y respuestas
+ordenadas por `id_prestamo`. La consulta por código normaliza mayúsculas y
+permite comprobar que un equipo no tiene historial.
+
+### Cobertura de seguridad ampliada
+
+`test_prestamo_y_devolucion_con_inyeccion_solo_guardan_texto` verifica que
+cadenas con `DROP`, `DELETE` y apóstrofos se mantienen como datos. Las tablas
+continúan existiendo y las relaciones de los datos no se alteran.

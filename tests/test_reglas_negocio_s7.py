@@ -48,17 +48,59 @@ def _marcar_prestado(ruta_db: str, codigo_equipo: str) -> None:
     "codigo, tipo, descripcion, esperado_codigo, esperado_tipo, esperado_desc",
     [
         # Caso normal: computador válido
-        ("EQ-01", "computador", "PC portátil sala 3", "EQ-01", "computador", "PC portátil sala 3"),
+        (
+            "EQ-01",
+            "computador",
+            "PC portátil sala 3",
+            "EQ-01",
+            "computador",
+            "PC portátil sala 3",
+        ),
         # Caso normal: proyector válido
-        ("EQ-02", "proyector", "Proyector aula 5", "EQ-02", "proyector", "Proyector aula 5"),
+        (
+            "EQ-02",
+            "proyector",
+            "Proyector aula 5",
+            "EQ-02",
+            "proyector",
+            "Proyector aula 5",
+        ),
         # Caso normal: tableta válida
-        ("EQ-03", "tableta", "Tableta de préstamo", "EQ-03", "tableta", "Tableta de préstamo"),
+        (
+            "EQ-03",
+            "tableta",
+            "Tableta de préstamo",
+            "EQ-03",
+            "tableta",
+            "Tableta de préstamo",
+        ),
         # Normalización: tipo en mayúsculas y con espacios
-        ("EQ-04", "  Tableta ", "Tableta 10 pulgadas", "EQ-04", "tableta", "Tableta 10 pulgadas"),
+        (
+            "EQ-04",
+            "  Tableta ",
+            "Tableta 10 pulgadas",
+            "EQ-04",
+            "tableta",
+            "Tableta 10 pulgadas",
+        ),
         # Normalización: código con espacios en extremos
-        ("  EQ-05  ", "computador", "PC de escritorio", "EQ-05", "computador", "PC de escritorio"),
+        (
+            "  EQ-05  ",
+            "computador",
+            "PC de escritorio",
+            "EQ-05",
+            "computador",
+            "PC de escritorio",
+        ),
         # Normalización: código en minúsculas
-        ("eq-07", "proyector", "Proyector portátil", "EQ-07", "proyector", "Proyector portátil"),
+        (
+            "eq-07",
+            "proyector",
+            "Proyector portátil",
+            "EQ-07",
+            "proyector",
+            "Proyector portátil",
+        ),
         # Caracteres difíciles: tilde, ñ y apóstrofo
         (
             "EQ-08",
@@ -149,7 +191,9 @@ def test_consultar_disponibles_todos_prestados_retorna_vacio(ruta_db):
 # --- Regla 3: registrar_prestamo ---
 
 
-def test_registrar_prestamo_valido_cambia_estado_a_prestado(ruta_db, datos_sinteticos_s7):
+def test_registrar_prestamo_valido_cambia_estado_a_prestado(
+    ruta_db, datos_sinteticos_s7
+):
     registrar_equipo("EQ-01", "computador", "PC sala 1", ruta_db)
     sol_id, sol_nombre, fecha = datos_sinteticos_s7["solicitantes"][0]
 

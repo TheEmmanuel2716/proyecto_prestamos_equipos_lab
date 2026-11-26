@@ -191,3 +191,35 @@ Trabajar con pruebas primero me obligó a definir el contrato antes de pensar en
 | Aceptadas             | 1        | 13       |
 | Aceptadas con cambios | 2        | 11, 12   |
 | Rechazadas            | 0        | -        |
+
+---
+
+# Consolidación integral 2026-11-26
+
+## Entrada 14. Consolidación de SQLite y operaciones restantes
+
+- **Decisión:** aceptada.
+- **Cambio:** se creó `inicializar_bd` como punto único de creación del esquema,
+  con índices y relaciones. Se completaron devoluciones por código y por ID,
+  consultas de activos e historial.
+- **Justificación:** las funciones podían operar sobre bases nuevas o
+  temporales sin asumir que otra función hubiera creado el esquema.
+- **Verificación:** se agregó `test_devoluciones_consultas.py` y la suite pasó
+  en verde.
+
+## Entrada 15. Endurecimiento transaccional
+
+- **Decisión:** aceptada.
+- **Cambio:** préstamos y devoluciones usan transacciones explícitas y rollback
+  ante errores; las operaciones públicas cierran siempre su conexión.
+- **Justificación:** evita estados parciales si falla el segundo paso de una
+  operación.
+- **Verificación:** pruebas de segunda devolución y equipo sin préstamo activo.
+
+## Entrada 16. Documentación y linter
+
+- **Decisión:** aceptada.
+- **Cambio:** README, registro de pruebas, bitácora y revisión de seguridad se
+  actualizaron para mostrar el ciclo completo y los pendientes reales.
+- **Verificación:** `python -m pytest -v` reportó 65 pruebas aprobadas;
+  `ruff check .` informó cero errores.
