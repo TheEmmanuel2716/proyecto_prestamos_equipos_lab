@@ -61,7 +61,7 @@ def _guardar_equipo(equipo: dict, ruta_db: str) -> None:
         except sqlite3.IntegrityError:
             raise ValueError(
                 f"El equipo '{equipo['codigo_equipo']}' ya está registrado."
-            )
+            ) from None
         conexion.commit()
     finally:
         conexion.close()
