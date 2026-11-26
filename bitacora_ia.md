@@ -13,7 +13,6 @@
 ## Entradas
 
 ### Entrada 1. Elección de la historia de usuario
-
 - **Fecha:** 2026-11-26
 - **Prompt o sugerencia:** Claude recomendó trabajar HU-04 (impedir préstamos de equipos ocupados) por su relación con RNF-01 y por tener más casos límite.
 - **Decisión:** Rechazada
@@ -22,7 +21,6 @@
 - **Commit relacionado:** `34b87be`
 
 ### Entrada 2. Contrato de la función en el README
-
 - **Fecha:** 2026-11-26
 - **Prompt o sugerencia:** Claude redactó la sección "Funcionalidad de la semana 5": firma con type hints, parámetros, retorno, excepciones, casos límite y 4 ejemplos. Incluía un parámetro opcional `ruta_db` que no estaba en el contrato de la Semana 4.
 - **Decisión:** Aceptada
@@ -31,7 +29,6 @@
 - **Commit relacionado:** `34b87be`
 
 ### Entrada 3. Pruebas antes de implementar
-
 - **Fecha:** 2026-11-26
 - **Prompt o sugerencia:** Claude propuso 12 casos de prueba (3 normales, 4 límite, 2 de error, algunos parametrizados) y un esqueleto de `src/equipos.py` que solo lanza `NotImplementedError`, para que `pytest` pudiera importar la función y mostrar pruebas en rojo.
 - **Decisión:** Aceptada
@@ -40,7 +37,6 @@
 - **Commit relacionado:** `3996491`
 
 ### Entrada 4. Implementación con SQLite
-
 - **Fecha:** 2026-11-26
 - **Prompt o sugerencia:** Claude entregó la implementación: validar antes de abrir la base, `codigo_equipo` como `PRIMARY KEY` para detectar duplicados con `sqlite3.IntegrityError` (traducido a `ValueError`), consultas con parámetros `?` y `try/finally` para cerrar la conexión.
 - **Decisión:** Aceptada
@@ -49,7 +45,6 @@
 - **Commit relacionado:** `f250843`
 
 ### Entrada 5. Entorno virtual y `.env`
-
 - **Fecha:** 2026-11-26
 - **Prompt o sugerencia:** Claude indicó crear un entorno virtual `.venv`, instalar `pytest` y generar `requirements.txt`. También indicó que no era necesario un archivo `.env` porque el proyecto no usa claves, y que bastaba dejarlo en el `.gitignore`.
 - **Decisión:** Aceptada
@@ -58,7 +53,6 @@
 - **Commit relacionado:** `3996491`
 
 ### Entrada 6. Refactorización
-
 - **Fecha:** 2026-11-26
 - **Prompt o sugerencia:** Claude propuso dividir `registrar_equipo` en `_normalizar_y_validar` y `_guardar_equipo`, mover el `INSERT` a la constante `SQL_INSERTAR_EQUIPO` y eliminar la duplicación del diccionario del equipo.
 - **Decisión:** Aceptada
@@ -70,11 +64,11 @@
 
 ## Tabla resumen de decisiones
 
-| Decisión              | Cantidad | Entradas      |
-| --------------------- | -------- | ------------- |
-| Aceptadas             | 5        | 2, 3, 4, 5, 6 |
-| Aceptadas con cambios | 0        | -             |
-| Rechazadas            | 1        | 1             |
+| Decisión | Cantidad | Entradas |
+|---|---|---|
+| Aceptadas | 5 | 2, 3, 4, 5, 6 |
+| Aceptadas con cambios | 0 | - |
+| Rechazadas | 1 | 1 |
 
 ---
 
@@ -91,3 +85,58 @@
 ## Reflexión final
 
 Trabajar con pruebas primero me obligó a definir el contrato antes de pensar en el código. Ver las 12 pruebas en rojo me dio confianza de que realmente comprobaban algo. Claude me ayudó a identificar casos límite que yo no había considerado, como el código en minúsculas y los espacios en los campos. Aun así, tuve que entender cada decisión (la clave primaria, los parámetros `?`, el orden de validación) para poder explicarla. Rechacé una recomendación porque prefería empezar por la base del modelo de datos. Aprendí que la IA acelera el trabajo, pero la responsabilidad de revisar y sustentar el código sigue siendo mía.
+
+---
+
+# Semana 6: revisión de código y seguridad
+
+- **Funcionalidad revisada:** HU-01. Registrar equipos (`registrar_equipo`)
+- **Asistente usado:** Claude
+- **Agente de código:** no se usó; todas las correcciones se aplicaron a mano en `main` y se revisaron con `pytest`, `ruff` y `git diff`.
+
+## Entradas
+
+### Entrada 7. Segunda revisión de código y seguridad con IA
+- **Fecha:** 2026-11-25
+- **Prompt o sugerencia:** Se le pidió a Claude actuar como auditor de seguridad y calidad (guía de la semana 6): revisar `src/equipos.py` y las pruebas con archivo, línea y severidad, separando problemas reales de falsos positivos. Claude entregó 8 hallazgos reales (H-01 a H-08) y 4 sospechas descartadas.
+- **Decisión:** Aceptada con cambios
+- **Por qué:** Acepté corregir H-01, H-02, H-03, H-05 y H-07 porque afectan el contrato, el linter o la cobertura. No corregí H-04, H-06 y H-08 porque implicaban modificar pruebas ya entregadas por mejoras menores; quedaron en Pendientes del informe. El hallazgo H-09 (README desactualizado) lo encontré yo y la IA no lo había señalado.
+- **Verificación:** H-01 y H-02 reproducidos con `python -c` (traceback encadenado y `AttributeError` con `None`); H-03 confirmado por el aviso E501 de `ruff`; los falsos positivos descartados leyendo el código (`finally`, `PRIMARY KEY`, consultas con parámetros).
+- **Commit relacionado:** `341614f` (commit revisado)
+
+### Entrada 8. Corrección de H-02 con pruebas primero
+- **Fecha:** 2026-11-25
+- **Prompt o sugerencia:** Claude propuso escribir primero 4 pruebas nuevas (`None` en cada campo y un número como código) y luego implementar `_limpiar_texto` más una validación de `tipo` obligatorio, para que los datos que no son texto lancen `ValueError` y no `AttributeError`.
+- **Decisión:** Aceptada
+- **Por qué:** El contrato dice que los datos faltantes lanzan `ValueError`. Seguir el orden rojo, verde mantiene el mismo método de la semana 5 y no se tocó ninguna prueba existente.
+- **Verificación:** las 4 pruebas nuevas fallaron antes de la corrección; después pasaron las 18 pruebas del proyecto y `ruff` quedó sin avisos nuevos.
+- **Commit relacionado:** `05b3b9e` (rojo) y `b787ff8` (verde)
+
+### Entrada 9. Prueba de abuso para el campo `tipo` (H-07)
+- **Fecha:** 2026-11-25
+- **Prompt o sugerencia:** Claude propuso agregar una prueba de que un `tipo` con SQL malicioso es rechazado y no toca la tabla, y predijo que pasaría a la primera.
+- **Decisión:** Aceptada con cambios
+- **Por qué:** La idea es válida porque ese campo no tenía prueba de abuso. Al ejecutarla, falló con `NameError: name 'pytest' is not defined`: faltaba `import pytest` en el archivo. La predicción de que pasaría a la primera fue incorrecta. Agregué el import (y dejé el espaciado estándar entre funciones) antes de hacer el commit.
+- **Verificación:** `pytest` pasó con 19 pruebas y `ruff check` sin avisos.
+- **Commit relacionado:** `ff8424d`
+
+### Entrada 10. No modificar pruebas existentes (excepto el formato de H-03)
+- **Fecha:** 2026-11-25
+- **Prompt o sugerencia:** Claude recomendó no tocar las pruebas ya entregadas por H-04, H-06 y H-08, y limitar el único cambio en una prueba existente a partir una línea larga (E501), sin cambiar argumentos ni `assert`.
+- **Decisión:** Aceptada
+- **Por qué:** La regla es nunca modificar pruebas para que pasen. El cambio de H-03 es solo de formato: la prueba pasaba antes y después.
+- **Verificación:** `git log -p -1 -- tests/test_registrar_equipo.py` mostró que solo se partió la línea, con los mismos argumentos; `pytest` y `ruff` limpios.
+- **Commit relacionado:** `60ed760`
+
+## Tabla resumen de decisiones (semana 6)
+
+| Decisión | Cantidad | Entradas |
+|---|---|---|
+| Aceptadas | 2 | 8, 10 |
+| Aceptadas con cambios | 2 | 7, 9 |
+| Rechazadas | 0 | - |
+
+## Errores que atraparon las pruebas (semana 6)
+
+- **Pruebas en rojo de H-02:** las 4 pruebas nuevas de `tests/test_validacion_entradas.py` fallaron antes de la corrección, lo que confirmó que `registrar_equipo` no manejaba datos que no son texto según el contrato. Pasaron tras el commit `b787ff8`.
+- **`NameError` en la prueba de H-07:** `test_tipo_con_sql_malicioso_es_rechazado_y_no_toca_la_tabla` falló con `NameError: name 'pytest' is not defined` (`1 failed, 18 passed`). La causa fue un import omitido en la prueba, no el código; se corrigió antes del commit.
