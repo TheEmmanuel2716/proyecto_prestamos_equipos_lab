@@ -53,7 +53,9 @@ def test_registrar_equipo_acepta_los_tres_tipos_permitidos(ruta_db, tipo):
 # ---------- Casos límite ----------
 
 def test_registrar_equipo_elimina_espacios_y_normaliza_codigo_y_tipo(ruta_db):
-    resultado = registrar_equipo("  eq-02 ", "  Proyector ", "  Epson ficticio ", ruta_db)
+    resultado = registrar_equipo(
+        "  eq-02 ", "  Proyector ", "  Epson ficticio ", ruta_db
+    )
 
     assert resultado == {
         "codigo_equipo": "EQ-02",
