@@ -84,7 +84,9 @@
 - **Qué prueba falló y por qué:** todas, porque la función aún no tenía lógica. Incluso las pruebas que esperan `ValueError` fallaron, lo que confirma que ninguna pasa por casualidad.
 - **Cómo se corrigió:** al implementar la función en el commit `f250843`, las 12 pasaron sin modificar ninguna prueba.
 - **Nota honesta:** en la fase de implementación no se presentaron errores: ninguna prueba reveló un error de lógica y las 12 pasaron a la primera.
-- **Limitación conocida (no cubierta por las pruebas):** si se pasa `None` o un número en lugar de texto, la función lanza `AttributeError` y no `ValueError`.
+- **Nota histórica:** esta limitación describe el estado anterior a la corrección
+  de H-02. Actualmente `_limpiar_texto` rechaza `None` y números con `ValueError`;
+  las pruebas posteriores verificaron ese contrato.
 
 ---
 
@@ -223,3 +225,16 @@ Trabajar con pruebas primero me obligó a definir el contrato antes de pensar en
   actualizaron para mostrar el ciclo completo y los pendientes reales.
 - **Verificación:** `python -m pytest -v` reportó 65 pruebas aprobadas;
   `ruff check .` informó cero errores.
+
+## Entrada 17. Auditoría integral final
+
+- **Fecha:** 2026-11-26
+- **Cambio:** se hizo una revisión nueva de código, pruebas y documentación.
+  Se corrigió el manejo de `sqlite3.IntegrityError` para distinguir duplicados
+  de otras violaciones, se ampliaron los casos de devolución por ID y entradas
+  no textuales del préstamo y se actualizó la revisión de seguridad.
+- **Justificación:** la revisión anterior conservaba pendientes ya resueltos y
+  no cubría todos los alias ni los errores de devolución por clave inexistente.
+- **Verificación:** se ejecutaron nuevamente `pytest`, `ruff` y `pip-audit`;
+  los resultados finales se consignan en el informe integrador y en
+  [`revision_seguridad.md`](revision_seguridad.md).

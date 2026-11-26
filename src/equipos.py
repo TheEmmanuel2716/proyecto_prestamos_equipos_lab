@@ -251,10 +251,16 @@ def _guardar_equipo(equipo: Equipo, ruta_db: str) -> None:
         try:
             conexion.execute(SQL_INSERTAR_EQUIPO, equipo)
         except sqlite3.IntegrityError:
+            fila_existente = conexion.execute(
+                SQL_BUSCAR_EQUIPO,
+                {"codigo_equipo": equipo["codigo_equipo"]},
+            ).fetchone()
             conexion.rollback()
-            raise ValueError(
-                f"El equipo '{equipo['codigo_equipo']}' ya está registrado."
-            ) from None
+            if fila_existente is not None:
+                raise ValueError(
+                    f"El equipo '{equipo['codigo_equipo']}' ya está registrado."
+                ) from None
+            raise
         conexion.commit()
     except Exception:
         conexion.rollback()

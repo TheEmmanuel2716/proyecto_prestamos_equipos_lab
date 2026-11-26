@@ -114,6 +114,7 @@ proyecto_prestamos_equipos_lab/
 ├── registro_pruebas.md
 ├── bitacora_ia.md
 ├── revision_seguridad.md
+├── informe_final_integrador.md
 └── LICENSE
 ```
 
@@ -122,7 +123,8 @@ proyecto_prestamos_equipos_lab/
 - Las entradas dinámicas se pasan por parámetros nombrados.
 - Las operaciones de préstamo/devolución hacen `BEGIN`, `commit` o `rollback`.
 - No existen secretos, cuentas reales ni credenciales en el repositorio.
-- `.env`, `.venv/`, `.db`, `.sqlite3`, cachés y `__pycache__/` están ignorados.
+- `.env`, `.venv/`, `.db`, `.sqlite3`, `.sqlite`, cachés y `__pycache__/`
+  están ignorados.
 - Los identificadores numéricos de préstamo se validan antes de consultar.
 
 ## 8. Documentación complementaria
@@ -130,6 +132,8 @@ proyecto_prestamos_equipos_lab/
 - [`registro_pruebas.md`](registro_pruebas.md): técnicas, casos y límites.
 - [`bitacora_ia.md`](bitacora_ia.md): decisiones y verificaciones.
 - [`revision_seguridad.md`](revision_seguridad.md): hallazgos y pendientes.
+- [`informe_final_integrador.md`](informe_final_integrador.md): síntesis, reflexión
+  y evidencias para la entrega.
 
 ## Autor y licencia
 

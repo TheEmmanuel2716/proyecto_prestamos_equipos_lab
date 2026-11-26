@@ -4,6 +4,8 @@ import pytest
 
 from src.equipos import (
     consultar_disponibles,
+    consultar_historial,
+    consultar_historial_prestamos,
     consultar_prestamos,
     consultar_prestamos_activos,
     devolver_prestamo,
@@ -80,6 +82,32 @@ def test_devolver_prestamo_por_id_funciona(ruta_db):
 
     assert devuelto["codigo_equipo"] == "EQ-01"
     assert devuelto["estado_prestamo"] == "devuelto"
+
+
+def test_devolver_prestamo_rechaza_id_inexistente(ruta_db):
+    with pytest.raises(ValueError, match="no existe"):
+        devolver_prestamo(999, "2026-11-27", ruta_db)
+
+
+def test_segunda_devolucion_por_id_rechaza_sin_cambiar_historial(ruta_db):
+    prestamo = prestar_equipo(ruta_db)
+    devolver_prestamo(prestamo["id_prestamo"], "2026-11-27", ruta_db)
+
+    with pytest.raises(ValueError, match="no tiene estado activo"):
+        devolver_prestamo(prestamo["id_prestamo"], "2026-11-28", ruta_db)
+
+    historial = consultar_prestamos(ruta_db)
+    assert len(historial) == 1
+    assert historial[0]["fecha_devolucion"] == "2026-11-27"
+
+
+def test_aliases_de_historial_devuelven_el_mismo_conjunto(ruta_db):
+    prestar_equipo(ruta_db)
+
+    completo = consultar_prestamos(ruta_db)
+
+    assert consultar_historial_prestamos(ruta_db) == completo
+    assert consultar_historial(ruta_db) == completo
 
 
 @pytest.mark.parametrize(
