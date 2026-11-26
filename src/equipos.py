@@ -4,6 +4,7 @@ from typing import TypedDict
 RUTA_DB_POR_DEFECTO = "laboratorio.db"
 TIPOS_PERMITIDOS = ("computador", "proyector", "tableta")
 ESTADO_INICIAL = "disponible"
+MENSAJE_CAMPO_OBLIGATORIO = "El campo {campo} es obligatorio."
 
 SQL_CREAR_TABLA = """
 CREATE TABLE IF NOT EXISTS equipo (
@@ -19,6 +20,7 @@ INSERT INTO equipo (codigo_equipo, tipo, descripcion, estado)
 VALUES (:codigo_equipo, :tipo, :descripcion, :estado)
 """
 
+
 class Equipo(TypedDict):
     """Datos de un equipo del inventario, tal como se guardan en SQLite."""
 
@@ -26,6 +28,7 @@ class Equipo(TypedDict):
     tipo: str
     descripcion: str
     estado: str
+
 
 def _limpiar_texto(valor: object) -> str:
     """Devuelve el texto sin espacios en los extremos.
@@ -36,7 +39,7 @@ def _limpiar_texto(valor: object) -> str:
     return valor.strip() if isinstance(valor, str) else ""
 
 
-def _normalizar_y_validar(codigo_equipo: str, tipo: str, descripcion: str) -> dict:
+def _normalizar_y_validar(codigo_equipo: str, tipo: str, descripcion: str) -> Equipo:
     """Limpia los datos de entrada, valida las reglas y arma el equipo.
 
     Raises:
@@ -48,11 +51,11 @@ def _normalizar_y_validar(codigo_equipo: str, tipo: str, descripcion: str) -> di
     descripcion_limpia = _limpiar_texto(descripcion)
 
     if not codigo:
-        raise ValueError("El campo codigo_equipo es obligatorio.")
+        raise ValueError(MENSAJE_CAMPO_OBLIGATORIO.format(campo="codigo_equipo"))
     if not descripcion_limpia:
-        raise ValueError("El campo descripcion es obligatorio.")
+        raise ValueError(MENSAJE_CAMPO_OBLIGATORIO.format(campo="descripcion"))
     if not tipo_normalizado:
-        raise ValueError("El campo tipo es obligatorio.")
+        raise ValueError(MENSAJE_CAMPO_OBLIGATORIO.format(campo="tipo"))
     if tipo_normalizado not in TIPOS_PERMITIDOS:
         raise ValueError(
             f"El tipo '{tipo_normalizado}' no es permitido. "
@@ -66,7 +69,8 @@ def _normalizar_y_validar(codigo_equipo: str, tipo: str, descripcion: str) -> di
         "estado": ESTADO_INICIAL,
     }
 
-def _guardar_equipo(equipo: dict, ruta_db: str) -> None:
+
+def _guardar_equipo(equipo: Equipo, ruta_db: str) -> None:
     """Inserta el equipo en SQLite, creando la tabla si no existe.
 
     Raises:
@@ -91,7 +95,7 @@ def registrar_equipo(
     tipo: str,
     descripcion: str,
     ruta_db: str = RUTA_DB_POR_DEFECTO,
-) -> dict:
+) -> Equipo:
     """Registra un equipo nuevo en el inventario con estado 'disponible'.
 
     Args:
@@ -103,11 +107,12 @@ def registrar_equipo(
         ruta_db: Ruta del archivo SQLite donde se guarda el equipo.
 
     Returns:
-        dict con las claves codigo_equipo, tipo, descripcion y estado.
+        Equipo: dict con las claves codigo_equipo, tipo, descripcion y estado.
 
     Raises:
-        ValueError: si falta el código o la descripción, si el tipo no es
-            permitido o si el código ya está registrado.
+        ValueError: si falta el código, el tipo o la descripción (o no son
+            texto), si el tipo no es permitido o si el código ya está
+            registrado.
     """
     equipo = _normalizar_y_validar(codigo_equipo, tipo, descripcion)
     _guardar_equipo(equipo, ruta_db)
