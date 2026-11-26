@@ -19,20 +19,32 @@ VALUES (:codigo_equipo, :tipo, :descripcion, :estado)
 """
 
 
+def _limpiar_texto(valor: object) -> str:
+    """Devuelve el texto sin espacios en los extremos.
+
+    Si el valor no es texto (por ejemplo None o un número), devuelve ''
+    para que se trate como un dato faltante.
+    """
+    return valor.strip() if isinstance(valor, str) else ""
+
+
 def _normalizar_y_validar(codigo_equipo: str, tipo: str, descripcion: str) -> dict:
     """Limpia los datos de entrada, valida las reglas y arma el equipo.
 
     Raises:
-        ValueError: si falta el código o la descripción, o si el tipo no es permitido.
+        ValueError: si falta el código, el tipo o la descripción (o no son
+            texto), o si el tipo no es permitido.
     """
-    codigo = codigo_equipo.strip().upper()
-    tipo_normalizado = tipo.strip().lower()
-    descripcion_limpia = descripcion.strip()
+    codigo = _limpiar_texto(codigo_equipo).upper()
+    tipo_normalizado = _limpiar_texto(tipo).lower()
+    descripcion_limpia = _limpiar_texto(descripcion)
 
     if not codigo:
         raise ValueError("El campo codigo_equipo es obligatorio.")
     if not descripcion_limpia:
         raise ValueError("El campo descripcion es obligatorio.")
+    if not tipo_normalizado:
+        raise ValueError("El campo tipo es obligatorio.")
     if tipo_normalizado not in TIPOS_PERMITIDOS:
         raise ValueError(
             f"El tipo '{tipo_normalizado}' no es permitido. "
@@ -45,7 +57,6 @@ def _normalizar_y_validar(codigo_equipo: str, tipo: str, descripcion: str) -> di
         "descripcion": descripcion_limpia,
         "estado": ESTADO_INICIAL,
     }
-
 
 def _guardar_equipo(equipo: dict, ruta_db: str) -> None:
     """Inserta el equipo en SQLite, creando la tabla si no existe.
