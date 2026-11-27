@@ -422,8 +422,11 @@ def registrar_prestamo(
 
 def _fila_a_prestamo(fila: tuple[object, ...]) -> Prestamo:
     """Convierte una fila SQLite completa a un diccionario de préstamo."""
+    id_prestamo = fila[0]
+    if not isinstance(id_prestamo, int):
+        raise TypeError("El id_prestamo de la fila debe ser un entero.")
     return {
-        "id_prestamo": int(fila[0]),
+        "id_prestamo": id_prestamo,
         "codigo_equipo": str(fila[1]),
         "solicitante_id": str(fila[2]),
         "solicitante_nombre": str(fila[3]),
